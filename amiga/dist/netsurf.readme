@@ -1,0 +1,17 @@
+Short:        Fast CSS capable web browser
+Uploader:     chris@unsatisfactorysoftware.co.uk (Chris Young)
+Author:       NetSurf contributors (OS4 port by Chris Young)
+Type:         comm/www
+Version:      2.9
+Architecture: ppc-amigaos >= 4.1.0
+
+NetSurf is a small, fast OS4 native web browser.  It does not
+require AmiCygnix and has a fully native Reaction-based GUI.
+
+See http://www.netsurf-browser.org for more information about NetSurf.
+
+This software is licensed under the GPL, and the sources are
+available from http://www.netsurf-browser.org.  A copy can
+also be obtained directly from the maintainer of this port,
+chris@unsatisfactorysoftware.co.uk, in the event that the
+website is unavailable.

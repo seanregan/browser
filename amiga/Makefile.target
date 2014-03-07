@@ -1,0 +1,86 @@
+# ----------------------------------------------------------------------------
+# Amiga target setup
+# ----------------------------------------------------------------------------
+
+CFLAGS += -std=c99 -I . -Dnsamiga
+
+ifneq ($(SUBTARGET),os3)
+  CFLAGS += -U__STRICT_ANSI__ -D__USE_INLINE__ -D__USE_BASETYPE__
+endif
+
+NETSURF_FEATURE_ROSPRITE_CFLAGS := -DWITH_NSSPRITE
+NETSURF_FEATURE_BMP_CFLAGS := -DWITH_BMP
+NETSURF_FEATURE_GIF_CFLAGS := -DWITH_GIF
+NETSURF_FEATURE_PNG_CFLAGS := -DWITH_PNG
+NETSURF_FEATURE_WEBP_CFLAGS := -DWITH_WEBP
+NETSURF_FEATURE_NSSVG_CFLAGS := -DWITH_NS_SVG
+NETSURF_FEATURE_VIDEO_CFLAGS := -DWITH_VIDEO
+
+ifeq ($(HOST),amiga)
+  $(eval $(call feature_enabled,ROSPRITE,-DWITH_NSSPRITE,-lrosprite,Sprite (librosprite)))
+  $(eval $(call feature_enabled,BMP,-DWITH_BMP,-lnsbmp,BMP (libnsbmp)))
+  $(eval $(call feature_enabled,GIF,-DWITH_GIF,-lnsgif,GIF (libnsgif)))
+  $(eval $(call feature_enabled,PNG,-DWITH_PNG,-lpng,PNG (libpng)  ))
+  $(eval $(call feature_enabled,NSSVG,-DWITH_NS_SVG,-lsvgtiny,SVG (libsvgtiny)))
+  $(eval $(call feature_enabled,MNG,,-llcms -ljpeg,PNG/JNG/MNG (libmng)))
+  $(eval $(call feature_enabled,WEBP,-DWITH_WEBP,-lwebp,WebP (libwebp)))
+  $(eval $(call feature_enabled,VIDEO,-DWITH_VIDEO -I /SDK/local/newlib/include/glib-2.0,-lgstreamer-0.10 -lglib-2.0 -lgobject-2.0 -lgmodule-2.0 -lgthread-2.0 -lintl -lffi,Video (libgstreamer)))
+  $(eval $(call feature_enabled,AMIGA_ICON,-DWITH_AMIGA_ICON,,Amiga icon))
+  $(eval $(call feature_enabled,AMIGA_DATATYPES,-DWITH_AMIGA_DATATYPES,,DataTypes))
+
+  CFLAGS += -I /SDK/local/common/include/libpng12
+  LDFLAGS += -lxml2 -lcurl -lrtmp -lpthread -lregex -lauto -lpbl
+  LDFLAGS += -lssl -lcrypto -lhubbub -lcss -lparserutils -lwapcaplet
+
+  ifeq ($(NETSURF_AMIGA_USE_CAIRO),YES)
+    CFLAGS += -DNS_AMIGA_CAIRO -I /SDK/local/common/include/cairo
+    LDFLAGS += -use-dynld -ldl -lcairo -lpixman-1 -lfreetype -lfontconfig -lpng -lexpat
+    EXETARGET := NetSurf
+  else
+    EXETARGET := NetSurf-Static
+  endif
+else
+  $(eval $(call pkg_config_find_and_add,ROSPRITE,librosprite,Sprite))
+  $(eval $(call pkg_config_find_and_add,BMP,libnsbmp,BMP))
+  $(eval $(call pkg_config_find_and_add,GIF,libnsgif,GIF))
+  $(eval $(call pkg_config_find_and_add,PNG,libpng,PNG))
+  $(eval $(call pkg_config_find_and_add,NSSVG,libsvgtiny,NSSVG))
+  $(eval $(call feature_enabled,AMIGA_ICON,-DWITH_AMIGA_ICON,,Amiga icon))
+  $(eval $(call feature_enabled,AMIGA_DATATYPES,-DWITH_AMIGA_DATATYPES,,DataTypes))
+
+  CFLAGS += -I$(GCCSDK_INSTALL_ENV)/include
+  CFLAGS += $(shell $(PKG_CONFIG) --cflags libxml-2.0 libcurl libcares openssl)
+  CFLAGS += $(shell $(PKG_CONFIG) --cflags tre libhubbub libcss)
+
+  LDFLAGS += $(shell $(PKG_CONFIG) --libs libxml-2.0 libcurl libcares openssl)
+  LDFLAGS += $(shell $(PKG_CONFIG) --libs tre libhubbub libcss)
+  LDFLAGS += -L$(GCCSDK_INSTALL_ENV)/lib
+
+  ifeq ($(SUBTARGET),os3)
+    LDFLAGS += -liconv
+  else
+    LDFLAGS += -lauto
+  endif
+
+  EXETARGET := NetSurf
+endif
+
+# ----------------------------------------------------------------------------
+# Source file setup
+# ----------------------------------------------------------------------------
+
+# S_AMIGA are sources purely for the Amiga build
+S_AMIGA := gui.c tree.c history.c hotlist.c schedule.c file.c	\
+	thumbnail.c misc.c bitmap.c font.c filetype.c utf8.c login.c	\
+	plotters.c object.c menu.c save_pdf.c arexx.c version.c		\
+	cookies.c context_menu.c clipboard.c save_complete.c		\
+	launch.c search.c history_local.c download.c iff_dr2d.c 	\
+	sslcert.c gui_options.c print.c	theme.c	drag.c icon.c system_colour.c \
+	datatypes.c dt_picture.c dt_anim.c dt_sound.c plugin_hack.c	\
+	stringview/stringview.c stringview/urlhistory.c
+S_AMIGA := $(addprefix amiga/,$(S_AMIGA))
+
+# This is the final source build list
+# Note this is deliberately *not* expanded here as common and image
+#   are not yet available
+SOURCES = $(S_COMMON) $(S_IMAGE) $(S_BROWSER) $(S_AMIGA) $(S_PDF)

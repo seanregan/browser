@@ -1,0 +1,72 @@
+# ----------------------------------------------------------------------------
+# Windows target setup
+# ----------------------------------------------------------------------------
+
+  LDFLAGS += -L${MINGW_INSTALL_ENV}/lib
+
+  NETSURF_FEATURE_NSSVG_CFLAGS := -DWITH_NS_SVG
+  NETSURF_FEATURE_ROSPRITE_CFLAGS := -DWITH_NSSPRITE
+  NETSURF_FEATURE_BMP_CFLAGS := -DWITH_BMP
+  NETSURF_FEATURE_GIF_CFLAGS := -DWITH_GIF
+  NETSURF_FEATURE_PNG_CFLAGS := -DWITH_PNG
+  $(eval $(call feature_enabled,BMP,-DWITH_BMP,-lnsbmp,BMP (libnsbmp)))
+  $(eval $(call feature_enabled,GIF,-DWITH_GIF,-lnsgif,GIF (libnsgif)))
+  $(eval $(call feature_enabled,PNG,-DWITH_PNG,-lpng,PNG (libpng)  ))
+  $(eval $(call feature_enabled,NSSVG,-DWITH_NS_SVG,-lsvgtiny,SVG (libsvgtiny)))
+  $(eval $(call feature_enabled,MNG,,-llcms -ljpeg,PNG/JNG/MNG (libmng)))
+
+  ifneq ($(PKG_CONFIG),)
+    CFLAGS += $(shell $(PKG_CONFIG) --cflags libcurl libhubbub zlib \
+		libparserutils libxml-2.0)
+    LDFLAGS += $(shell $(PKG_CONFIG) --libs zlib libxml-2.0 libcurl \
+		libhubbub libparserutils libcss libwapcaplet)
+  else
+    LDFLAGS += -lhubbub -lcss -lparserutils -lwapcaplet -lxml2 -lcurl -lz
+  endif
+
+  LDFLAGS += -lssl -lcrypto -lregex -liconv \
+	     -lgdi32 -lcomctl32 -lws2_32 -lmsimg32 -mwindows
+
+  CFLAGS += -U__STRICT_ANSI__ -mwin32
+  # only windows versions after XP are supported
+  CFLAGS += '-DWINVER=0x0501'
+  CFLAGS += '-D_WIN32_WINNT=0x0501'
+  CFLAGS += '-D_WIN32_WINDOWS=0x0501'
+  CFLAGS += '-D_WIN32_IE=0x0501'
+
+ #installed resource path
+ CFLAGS += '-DNETSURF_WINDOWS_RESPATH="$(NETSURF_WINDOWS_RESPATH)"'
+
+
+  WSCFLAGS := -std=c99 \
+	$(WARNFLAGS) -I. -I${MINGW_INSTALL_ENV}/include/ \
+	-DCURL_STATICLIB -DLIBXML_STATIC -g
+  CFLAGS += $(WSCFLAGS)
+  LDFLAGS += $(WSCFLAGS)
+
+# ----------------------------------------------------------------------------
+# built-in resource setup
+# ----------------------------------------------------------------------------
+
+$(OBJROOT)/windows_resource.o: windows/res/resource.rc
+	$(VQ)echo " WINDRES: compiling windows resources"
+	${Q}$(MINGW_PREFIX)windres $< -O coff -o $@
+
+S_RESOURCES := windows_resource.o
+
+# ----------------------------------------------------------------------------
+# Source file setup
+# ----------------------------------------------------------------------------
+
+# S_WINDOWS are sources purely for the windows build
+S_WINDOWS := main.c window.c gui.c drawable.c misc.c plot.c findfile.c	\
+	  font.c bitmap.c about.c prefs.c download.c filetype.c		\
+	  localhistory.c login.c schedule.c thumbnail.c tree.c		\
+	  windbg.c system_colour.c
+S_WINDOWS := $(addprefix windows/,$(S_WINDOWS)) 
+
+# This is the final source build list
+# Note this is deliberately *not* expanded here as common and image
+#   are not yet available
+SOURCES = $(S_COMMON) $(S_IMAGE) $(S_BROWSER) $(S_WINDOWS) $(S_RESOURCES)
+EXETARGET := NetSurf.exe

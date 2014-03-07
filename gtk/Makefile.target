@@ -1,0 +1,88 @@
+# ----------------------------------------------------------------------------
+# GTK flag setup (using pkg-config)
+# ----------------------------------------------------------------------------
+
+LDFLAGS += $(shell $(PKG_CONFIG) --libs libxml-2.0 libcurl libhubbub libcss)
+LDFLAGS += $(shell $(PKG_CONFIG) --libs openssl)
+
+# define additional CFLAGS and LDFLAGS requirements for pkg-configed libs here
+NETSURF_FEATURE_RSVG_CFLAGS := -DWITH_RSVG
+NETSURF_FEATURE_NSSVG_CFLAGS := -DWITH_NS_SVG
+NETSURF_FEATURE_ROSPRITE_CFLAGS := -DWITH_NSSPRITE
+NETSURF_FEATURE_BMP_CFLAGS := -DWITH_BMP
+NETSURF_FEATURE_GIF_CFLAGS := -DWITH_GIF
+NETSURF_FEATURE_PNG_CFLAGS := -DWITH_PNG
+NETSURF_FEATURE_WEBP_CFLAGS := -DWITH_WEBP
+NETSURF_FEATURE_VIDEO_CFLAGS := -DWITH_VIDEO
+NETSURF_FEATURE_JS_CFLAGS := -DWITH_JS -DJS_HAS_FILE_OBJECT=0
+
+# add a line similar to below for each optional pkg-configed lib here
+$(eval $(call pkg_config_find_and_add,RSVG,librsvg-2.0,SVG))
+$(eval $(call pkg_config_find_and_add,NSSVG,libsvgtiny,SVG))
+$(eval $(call pkg_config_find_and_add,ROSPRITE,librosprite,Sprite))
+$(eval $(call pkg_config_find_and_add,BMP,libnsbmp,BMP))
+$(eval $(call pkg_config_find_and_add,GIF,libnsgif,GIF))
+$(eval $(call pkg_config_find_and_add,PNG,libpng,PNG  ))
+$(eval $(call pkg_config_find_and_add,VIDEO,gstreamer-0.10,Video))
+$(eval $(call pkg_config_find_and_add,JS,mozilla-js,JavaScript))
+
+# no pkg-config for this library
+$(eval $(call feature_enabled,WEBP,-DWITH_WEBP,-lwebp,WebP (libwebp)))
+
+# GTK and GLIB flags to disable depricated usage
+GTKDEPFLAGS := -DG_DISABLE_SINGLE_INCLUDES \
+		-DG_DISABLE_DEPRECATED \
+	       	-DGTK_DISABLE_SINGLE_INCLUDES \
+	       	-DGTK_DISABLE_DEPRECATED \
+		-DGTK_MULTIHEAD_SAFE \
+		-DPANGO_DISABLE_DEPRECATED \
+	       	-DGDK_PIXBUF_DISABLE_DEPRECATED
+
+# libsexy currently means we cannot enable this
+#		-DGDK_DISABLE_DEPRECATED 
+
+GTKCFLAGS := -std=c99 -Dgtk -Dnsgtk \
+		$(GTKDEPFLAGS) \
+		-D_BSD_SOURCE \
+		-D_XOPEN_SOURCE=600 \
+		-D_POSIX_C_SOURCE=200112L \
+		-D_NETBSD_SOURCE \
+		-DGTK_RESPATH=\"$(NETSURF_GTK_RESOURCES)\" \
+		$(WARNFLAGS) -I. -g \
+		$(shell $(PKG_CONFIG) --cflags libglade-2.0 gtk+-2.0) \
+		$(shell $(PKG_CONFIG) --cflags libhubbub libcurl) \
+		$(shell $(PKG_CONFIG) --cflags openssl) \
+		$(shell xml2-config --cflags)
+
+GTKLDFLAGS := $(shell $(PKG_CONFIG) --cflags --libs libglade-2.0 gtk+-2.0 gthread-2.0 gmodule-2.0 lcms)
+
+CFLAGS += $(GTKCFLAGS)
+LDFLAGS += $(GTKLDFLAGS)
+
+# ---------------------------------------------------------------------------
+# Windows flag setup
+# ---------------------------------------------------------------------------
+
+ifeq ($(HOST),Windows_NT)
+    CFLAGS += -U__STRICT_ANSI__
+endif
+
+# ----------------------------------------------------------------------------
+# Source file setup
+# ----------------------------------------------------------------------------
+
+# S_GTK are sources purely for the GTK build
+S_GTK := font_pango.c bitmap.c gui.c schedule.c thumbnail.c plotters.c	\
+	treeview.c scaffolding.c gdk.c completion.c login.c throbber.c	\
+	selection.c history.c window.c filetype.c download.c menu.c	\
+	print.c save.c search.c tabs.c theme.c toolbar.c		\
+	sexy_icon_entry.c compat.c cookies.c hotlist.c system_colour.c	\
+	$(addprefix dialogs/,options.c about.c source.c)
+S_GTK := $(addprefix gtk/,$(S_GTK)) $(addprefix utils/,container.c)
+# code in utils/container.ch is non-universal it seems
+
+# This is the final source build list
+# Note this is deliberately *not* expanded here as common and image
+#   are not yet available
+SOURCES = $(S_COMMON) $(S_IMAGE) $(S_BROWSER) $(S_PDF) $(S_GTK)
+EXETARGET := nsgtk
